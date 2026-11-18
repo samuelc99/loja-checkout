@@ -20,6 +20,13 @@ input { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8p
 button, .botao { display: block; width: 100%; margin-top: 20px; padding: 14px; border: 0; border-radius: 8px; background: #1d5fd6; color: #fff; font-size: 16px; text-align: center; text-decoration: none; cursor: pointer; }
 button:disabled { opacity: .5; cursor: default; }
 
+[hidden] { display: none !important; }
+.espaco { margin-top: 28px; }
+.metodos { display: flex; gap: 12px; }
+.metodos button { flex: 1; margin-top: 0; background: #fff; color: #1f2937; border: 1px solid #d1d5db; }
+.metodos button.ativo { border: 2px solid #1d5fd6; color: #1d5fd6; font-weight: 600; }
+#cartao { margin-top: 16px; }
+
 .erro { color: #b91c1c; }
 .qr { display: block; margin: 16px auto; width: 220px; }
 textarea { width: 100%; height: 80px; font-size: 12px; }

@@ -1,6 +1,6 @@
 # Minha Loja — Checkout com Pix
 
-Checkout web de uma loja fictícia: o cliente escolhe produtos, informa seus dados e paga com **Pix**.
+Checkout web de uma loja fictícia: o cliente escolhe produtos, informa seus dados e paga com **Pix** ou **cartão**.
 Integração com **Mercado Pago (Checkout Transparente / Orders API)** e um modo **simulado** para demonstração sem conta.
 
 **Stack:** Node.js + Express, MySQL, HTML/CSS/JavaScript.
@@ -31,8 +31,8 @@ npm start                 # http://localhost:3001
 
 | `PAYMENT_PROVIDER` | Comportamento |
 |---|---|
-| `simulado` (padrão) | Gera um Pix fictício que é aprovado automaticamente 15 s depois. Não precisa de conta. |
-| `mercadopago` | Cria o Pix pelo Mercado Pago. Preencha `MP_ACCESS_TOKEN` com um Access Token do painel Mercado Pago Developers: com o **de teste**, o QR Code é fictício; com o **de produção**, o pagamento é real (a conta precisa ter uma chave Pix cadastrada). |
+| `simulado` (padrão) | Pix fictício aprovado automaticamente 15 s depois; cartão aprovado na hora (nenhum dado de cartão é pedido). Não precisa de conta. |
+| `mercadopago` | Cria o pagamento pelo Mercado Pago. Preencha `MP_ACCESS_TOKEN` e `MP_PUBLIC_KEY` com as credenciais do painel Mercado Pago Developers: as **de teste** usam QR Code fictício e cartões de teste (listados na documentação do Mercado Pago); as **de produção** fazem cobranças reais (para Pix, a conta precisa ter uma chave Pix cadastrada). |
 
 ## Estrutura
 
@@ -53,7 +53,7 @@ public/
   js/api.js                  # chamadas à API própria
   js/carrinho.js, utils.js
   js/pages/                  # catalogo, checkout, resultado
-  js/components/             # produtoCard, resumoPedido, statusBadge
+  js/components/             # produtoCard, resumoPedido, statusBadge, cartaoMercadoPago
 ```
 
 ## Arquitetura e fluxo de pagamento
@@ -67,11 +67,12 @@ sequenceDiagram
 
     F->>A: GET /api/produtos
     A->>DB: SELECT produtos ativos
-    F->>A: POST /api/pedidos {nome, email, itens[id, qtd]}
-    A->>DB: busca preços, calcula total, grava pedido + itens
-    F->>A: POST /api/pedidos/:id/checkout
-    A->>P: cria cobrança Pix (X-Idempotency-Key = id do pedido)
-    P-->>A: id externo + QR Code
+    F->>A: POST /api/pedidos {nome, email, cpf, itens[id, qtd]}
+    A->>DB: valida CPF, busca preços, calcula total, grava pedido + itens
+    Note over F,P: Cartão: o formulário do Mercado Pago envia o cartão direto ao provedor e devolve só um token
+    F->>A: POST /api/pedidos/:id/checkout {metodo: pix | cartao, token}
+    A->>P: cria cobrança (X-Idempotency-Key = id do pedido)
+    P-->>A: id externo + QR Code (Pix) ou aprovado/recusado (cartão)
     A->>DB: grava pagamento
     F->>A: GET /api/pedidos/:id (a cada 5 s enquanto pendente)
     A->>P: consulta status
@@ -99,6 +100,7 @@ erDiagram
         CHAR id PK
         VARCHAR comprador
         VARCHAR email
+        CHAR cpf
         INT total_centavos
         VARCHAR status
         TIMESTAMP criado_em
@@ -130,7 +132,7 @@ erDiagram
 ```
 
 - **produtos**: id, nome, descricao, preco_centavos, ativo
-- **pedidos**: id (UUID), comprador, email, total_centavos, status, criado_em
+- **pedidos**: id (UUID), comprador, email, cpf (só dígitos), total_centavos, status, criado_em
 - **itens_pedido**: pedido_id, produto_id, quantidade, preco_unitario_centavos
 - **pagamentos**: pedido_id (único), provedor, id_externo, metodo, status, qr_code, qr_code_base64, checkout_url, criado_em
 - **historico_status**: pedido_id, status, criado_em — uma linha a cada mudança de status do pedido
@@ -141,9 +143,10 @@ Valores em **centavos (INT)** — sem ponto flutuante para dinheiro.
 
 | Método | Rota | Descrição |
 |---|---|---|
+| GET | `/api/config` | Provedor ativo e a Public Key do Mercado Pago (pública, usada no formulário de cartão) |
 | GET | `/api/produtos` | Lista produtos ativos |
-| POST | `/api/pedidos` | Cria pedido. Body: `{ "nome", "email", "itens": [{ "produtoId", "quantidade" }] }`. Retorna `{ id, total_centavos, status }` |
-| POST | `/api/pedidos/:id/checkout` | Cria a cobrança Pix no provedor e retorna o pedido com `pagamento` (QR Code, copia e cola, link) |
+| POST | `/api/pedidos` | Cria pedido. Body: `{ "nome", "email", "cpf", "itens": [{ "produtoId", "quantidade" }] }`. Retorna `{ id, total_centavos, status }` |
+| POST | `/api/pedidos/:id/checkout` | Cria a cobrança no provedor. Body: `{ "metodo": "pix" }` ou `{ "metodo": "cartao", "cartao": { "token", "paymentMethodId", "tipo" } }`. Retorna o pedido com `pagamento` (QR Code, copia e cola, link) |
 | GET | `/api/pedidos/:id` | Retorna o pedido, o pagamento e o `historico` de status; se estiver pendente, consulta o provedor e atualiza o status |
 
 Status possíveis: `pendente`, `aprovado`, `recusado`, `expirado`, `cancelado`.
@@ -154,13 +157,17 @@ Erros retornam `{ "erro": "mensagem" }` com status 400, 404, 502 ou 503.
 - **Total calculado no backend**: o navegador envia só IDs e quantidades; os preços vêm do banco.
 - **Status vem do provedor**: a tela de resultado consulta a API, que pergunta ao provedor. Nada é marcado como pago pelo navegador.
 - **Sem duplicar pagamento (RF07)**: `pagamentos.pedido_id` é `UNIQUE`, o checkout devolve o pagamento existente se for chamado de novo, e o Mercado Pago recebe `X-Idempotency-Key` com o ID do pedido.
-- **Camada de integração separada**: cada provedor é um módulo com `criarPix()` e `consultar()`; trocar de provedor é só mudar o `.env`.
+- **Camada de integração separada**: cada provedor é um módulo com `criarPix()`, `criarCartao()` e `consultar()`; trocar de provedor é só mudar o `.env`.
+- **Cartão sem passar pelo servidor**: o formulário de cartão é o Card Payment Brick do Mercado Pago; número, validade e CVV vão direto ao provedor, e o backend recebe apenas um token de uso único.
+- **CPF**: validado no backend (dígitos verificadores), enviado ao provedor como identificação do pagador e não é devolvido pela API de consulta do pedido.
 - **Segurança**: Access Token só no backend e no `.env` (ignorado pelo Git); nenhum dado de cartão é armazenado; entradas validadas; logs sem token nem dados pessoais; HTML escapado no frontend.
 - **Falhas do provedor**: timeout de 10 s, erro 429 (limite de requisições) e respostas inválidas viram mensagens claras para o usuário (502/503).
 
 ## Limitações
 
-- Apenas **Pix**.
+- **Pix** e **cartão à vista** (sem parcelamento); boleto ficou de fora.
+- O cartão tem valor mínimo exigido pelo Mercado Pago: em pedidos muito baratos (ex.: R$ 0,10) o formulário de cartão não carrega e a tela sugere pagar com Pix.
+- No modo simulado, o cartão é sempre aprovado (não há formulário de cartão, já que não existe provedor real).
 - **Sem webhook**: a tela do pedido consulta o status a cada 5 segundos enquanto ele está pendente (ou ao clicar em "Verificar pagamento"); a API então pergunta ao provedor.
 - O carrinho fica em memória no navegador (recarregar a página o esvazia).
 - O provedor **simulado** guarda os pagamentos em memória; ao reiniciar o servidor, pagamentos pendentes antigos aparecem como `expirado`.
@@ -179,3 +186,7 @@ Erros retornam `{ "erro": "mensagem" }` com status 400, 404, 502 ou 503.
 | 7 | API recusa pedido com nome vazio (`400 {"erro":"Nome é obrigatório"}`) | ✅ OK |
 | 8 | Com o MySQL desligado, a API responde `500 {"erro":"Erro interno"}` sem expor detalhes | ✅ OK |
 | 9 | Credenciais de **teste** do Mercado Pago: QR Code gerado, mas recusado pelos bancos (esperado, é um ambiente fictício) | ✅ Comportamento esperado |
+| 10 | API recusa **CPF inválido** (`400 {"erro":"CPF inválido"}`) e aceita CPF válido | ✅ OK |
+| 11 | API recusa método de pagamento desconhecido (`400 {"erro":"Método de pagamento inválido"}`) | ✅ OK |
+| 12 | Opção **Cartão** com Mercado Pago: formulário seguro do Mercado Pago carrega na página | ✅ OK |
+| 13 | Cartão em pedido de **R$ 0,10**: Mercado Pago não aceita o valor (abaixo do mínimo) | ✅ Comportamento esperado |

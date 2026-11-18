@@ -1,4 +1,4 @@
-// Simulação controlada: o Pix é "pago" 15 segundos depois de gerado
+// Simulação controlada: o Pix é "pago" 15 segundos depois de gerado; o cartão é aprovado na hora
 import QRCode from 'qrcode';
 
 export const nome = 'simulado';
@@ -18,6 +18,11 @@ export async function criarPix(pedido) {
     qrCodeBase64: imagem.split(',')[1],
     checkoutUrl: null,
   };
+}
+
+// Cartão simulado: nenhum dado de cartão é coletado; aprova na hora
+export async function criarCartao(pedido) {
+  return { idExterno: `SIM-${pedido.id}`, status: 'aprovado', qrCode: null, qrCodeBase64: null, checkoutUrl: null };
 }
 
 export async function consultar(idExterno) {

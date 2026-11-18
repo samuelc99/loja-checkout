@@ -13,6 +13,7 @@ CREATE TABLE pedidos (
   id CHAR(36) PRIMARY KEY,
   comprador VARCHAR(100) NOT NULL,
   email VARCHAR(150) NOT NULL,
+  cpf CHAR(11),
   total_centavos INT NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'pendente',
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP

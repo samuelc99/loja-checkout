@@ -21,6 +21,7 @@ export default async function Resultado(app, pedidoId) {
         <h2>Pedido ${esc(pedido.id.slice(0, 8))}</h2>
         <div class="linha"><span>Comprador</span><span>${esc(pedido.comprador)}</span></div>
         <div class="linha"><span>Valor</span><strong>${formatarPreco(pedido.total_centavos)}</strong></div>
+        <div class="linha"><span>Pagamento</span><span>${pag.metodo === 'cartao' ? 'Cartão' : 'Pix'}</span></div>
         <div class="linha"><span>Status</span>${StatusBadge(pedido.status)}</div>
 
         ${pendente && pag.qr_code_base64 ? `<img class="qr" src="data:image/png;base64,${esc(pag.qr_code_base64)}" alt="QR Code Pix">` : ''}
