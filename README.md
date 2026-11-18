@@ -156,10 +156,10 @@ Erros retornam `{ "erro": "mensagem" }` com status 400, 404, 502 ou 503.
 
 ## Limitações
 
-- Apenas **Pix** (cartão e boleto ficaram de fora para manter o escopo simples).
+- Apenas **Pix**.
 - **Sem webhook**: a tela do pedido consulta o status a cada 5 segundos enquanto ele está pendente (ou ao clicar em "Verificar pagamento"); a API então pergunta ao provedor.
 - O carrinho fica em memória no navegador (recarregar a página o esvazia).
-- O provedor simulado guarda os pagamentos em memória; ao reiniciar o servidor, pagamentos pendentes antigos aparecem como `expirado`.
+- O provedor guarda os pagamentos em memória; ao reiniciar o servidor, pagamentos pendentes antigos aparecem como `expirado`.
 - No ambiente de teste do Mercado Pago o Pix não é pago de verdade; o pedido fica `pendente` até expirar.
 
 ## Testes realizados
