@@ -1,0 +1,13 @@
+{
+  "name": "loja-checkout",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5",
+    "qrcode": "^1.5.4"
+  }
+}
