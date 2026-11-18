@@ -1,4 +1,4 @@
-// Mercado Pago - Checkout Transparente / Orders API (Pix)
+// Mercado Pago - Checkout Transparente / Orders API (Pix e cartão)
 // Docs: https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/payment-integration/websites/pix
 export const nome = 'mercadopago';
 
@@ -32,13 +32,28 @@ async function chamar(url, options = {}) {
 
   const body = await res.json().catch(() => null);
   if (!res.ok || !body) {
-    console.error('Mercado Pago respondeu', res.status, body?.errors || body?.message);
+    console.error('Mercado Pago respondeu', res.status, JSON.stringify(body?.errors || body?.message));
+    // 4xx = dados recusados (ex.: cartão inválido); 5xx/sem corpo = problema no provedor
+    if (res.status >= 400 && res.status < 500) throw falha(422, 'Pagamento não aceito pelo provedor. Confira os dados e tente novamente.');
     throw falha(502, 'Falha ao comunicar com o provedor de pagamento');
   }
   return body;
 }
 
-export async function criarPix(pedido) {
+export const criarPix = (pedido) => criarOrder(pedido, { id: 'pix', type: 'bank_transfer' });
+
+// cartao = { token, paymentMethodId, tipo } vindo do formulário seguro do Mercado Pago
+export function criarCartao(pedido, cartao) {
+  if (!cartao?.token || !cartao?.paymentMethodId) throw falha(400, 'Dados do cartão ausentes');
+  return criarOrder(pedido, {
+    id: cartao.paymentMethodId, // ex.: visa, master
+    type: cartao.tipo === 'debit_card' ? 'debit_card' : 'credit_card',
+    token: cartao.token,
+    installments: 1,
+  });
+}
+
+async function criarOrder(pedido, paymentMethod) {
   const valor = (pedido.total_centavos / 100).toFixed(2);
   const order = await chamar(API, {
     method: 'POST',
@@ -48,8 +63,8 @@ export async function criarPix(pedido) {
       processing_mode: 'automatic',
       external_reference: pedido.id,
       total_amount: valor,
-      payer: { email: pedido.email },
-      transactions: { payments: [{ amount: valor, payment_method: { id: 'pix', type: 'bank_transfer' } }] },
+      payer: { email: pedido.email, identification: { type: 'CPF', number: pedido.cpf } },
+      transactions: { payments: [{ amount: valor, payment_method: paymentMethod }] },
     }),
   });
 

@@ -6,8 +6,9 @@ async function request(url, options = {}) {
 }
 
 export const api = {
+  config: () => request('/api/config'),
   listarProdutos: () => request('/api/produtos'),
   criarPedido: (dados) => request('/api/pedidos', { method: 'POST', body: JSON.stringify(dados) }),
-  iniciarCheckout: (id) => request(`/api/pedidos/${id}/checkout`, { method: 'POST' }),
+  iniciarCheckout: (id, dados) => request(`/api/pedidos/${id}/checkout`, { method: 'POST', body: JSON.stringify(dados) }),
   consultarPedido: (id) => request(`/api/pedidos/${id}`),
 };
