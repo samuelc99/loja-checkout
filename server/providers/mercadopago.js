@@ -1,5 +1,3 @@
-// Mercado Pago - Checkout Transparente / Orders API (Pix e cartão)
-// Docs: https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/payment-integration/websites/pix
 export const nome = 'mercadopago';
 
 const API = 'https://api.mercadopago.com/v1/orders';
@@ -23,7 +21,7 @@ async function chamar(url, options = {}) {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      signal: AbortSignal.timeout(10000), // timeout de 10s
+      signal: AbortSignal.timeout(10000),
     });
   } catch {
     throw falha(502, 'Provedor de pagamento indisponível');
@@ -33,7 +31,6 @@ async function chamar(url, options = {}) {
   const body = await res.json().catch(() => null);
   if (!res.ok || !body) {
     console.error('Mercado Pago respondeu', res.status, JSON.stringify(body?.errors || body?.message));
-    // 4xx = dados recusados (ex.: cartão inválido); 5xx/sem corpo = problema no provedor
     if (res.status >= 400 && res.status < 500) throw falha(422, 'Pagamento não aceito pelo provedor. Confira os dados e tente novamente.');
     throw falha(502, 'Falha ao comunicar com o provedor de pagamento');
   }
@@ -42,11 +39,10 @@ async function chamar(url, options = {}) {
 
 export const criarPix = (pedido) => criarOrder(pedido, { id: 'pix', type: 'bank_transfer' });
 
-// cartao = { token, paymentMethodId, tipo } vindo do formulário seguro do Mercado Pago
 export function criarCartao(pedido, cartao) {
   if (!cartao?.token || !cartao?.paymentMethodId) throw falha(400, 'Dados do cartão ausentes');
   return criarOrder(pedido, {
-    id: cartao.paymentMethodId, // ex.: visa, master
+    id: cartao.paymentMethodId,
     type: cartao.tipo === 'debit_card' ? 'debit_card' : 'credit_card',
     token: cartao.token,
     installments: 1,
@@ -57,7 +53,7 @@ async function criarOrder(pedido, paymentMethod) {
   const valor = (pedido.total_centavos / 100).toFixed(2);
   const order = await chamar(API, {
     method: 'POST',
-    headers: { 'X-Idempotency-Key': pedido.id }, // mesma chave = mesma cobrança
+    headers: { 'X-Idempotency-Key': pedido.id },
     body: JSON.stringify({
       type: 'online',
       processing_mode: 'automatic',

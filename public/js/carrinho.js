@@ -1,4 +1,3 @@
-// Estado do carrinho em memória: { [produtoId]: { produto, quantidade } }
 export const carrinho = {};
 
 export function definirQuantidade(produto, quantidade) {
