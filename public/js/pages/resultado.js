@@ -38,7 +38,6 @@ export default async function Resultado(app, pedidoId) {
 
     app.querySelector('#atualizar')?.addEventListener('click', render);
 
-    // Enquanto pendente e nesta tela, consulta de novo a cada 5 segundos
     clearTimeout(timer);
     if (pendente) timer = setTimeout(() => location.hash === `#/pedido/${pedidoId}` && render(), 5000);
   }

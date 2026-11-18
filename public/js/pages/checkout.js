@@ -43,7 +43,6 @@ export default async function Checkout(app) {
     erroEl.textContent = '';
     try {
       if (!form.reportValidity()) throw new Error('Preencha os dados do comprador');
-      // Envia só IDs e quantidades; o backend calcula o total
       const pedido = await api.criarPedido({
         nome: form.nome.value,
         email: form.email.value,
@@ -64,14 +63,12 @@ export default async function Checkout(app) {
     pagar().catch(() => (botao.disabled = false));
   };
 
-  // Troca entre Pix e cartão
   app.querySelectorAll('[data-metodo]').forEach((b) => {
     b.onclick = () => {
       metodo = b.dataset.metodo;
       erroEl.textContent = '';
       app.querySelectorAll('[data-metodo]').forEach((x) => x.classList.toggle('ativo', x === b));
 
-      // Com Mercado Pago, o cartão usa o formulário seguro dele (que tem o próprio botão de pagar)
       const usaFormMP = metodo === 'cartao' && config.mpPublicKey;
       app.querySelector('#cartao').hidden = !usaFormMP;
       botao.hidden = usaFormMP;

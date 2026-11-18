@@ -4,7 +4,6 @@ import provider from '../providers/index.js';
 
 const erro = (status, message) => Object.assign(new Error(message), { status });
 
-// Valida os dois dígitos verificadores do CPF
 function cpfValido(cpf) {
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
   for (const n of [9, 10]) {
@@ -22,7 +21,6 @@ export async function criarPedido({ nome, email, cpf, itens } = {}) {
   if (!cpfValido(cpf)) throw erro(400, 'CPF inválido');
   if (!Array.isArray(itens) || itens.length === 0) throw erro(400, 'Carrinho vazio');
 
-  // Nunca confiar no preço do navegador: busca os preços no banco
   const ids = itens.map((i) => Number(i.produtoId));
   const [produtos] = await db.query('SELECT id, preco_centavos FROM produtos WHERE ativo = TRUE AND id IN (?)', [ids]);
 
@@ -50,15 +48,12 @@ export async function criarPedido({ nome, email, cpf, itens } = {}) {
   return { id, total_centavos: total, status: 'pendente' };
 }
 
-// metodo: 'pix' ou 'cartao'. Para cartão, recebe só o token gerado pelo Mercado Pago (nunca o número do cartão).
 export async function iniciarCheckout(pedidoId, { metodo, cartao } = {}) {
   if (!['pix', 'cartao'].includes(metodo)) throw erro(400, 'Método de pagamento inválido');
   const pedido = await buscarPedido(pedidoId);
 
-  // Idempotência: se já existe pagamento para o pedido, devolve o mesmo (RF07)
   if (pedido.pagamento) return pedido;
 
-  // CPF não é devolvido pela API (dado pessoal); só é usado aqui para enviar ao provedor
   const [[{ cpf }]] = await db.query('SELECT cpf FROM pedidos WHERE id = ?', [pedidoId]);
   const dados = { ...pedido, cpf };
   const pag = metodo === 'cartao' ? await provider.criarCartao(dados, cartao) : await provider.criarPix(dados);
@@ -67,7 +62,6 @@ export async function iniciarCheckout(pedidoId, { metodo, cartao } = {}) {
     'INSERT INTO pagamentos (pedido_id, provedor, id_externo, metodo, status, qr_code, qr_code_base64, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [pedidoId, provider.nome, pag.idExterno, metodo, pag.status, pag.qrCode, pag.qrCodeBase64, pag.checkoutUrl]
   );
-  // Cartão costuma ser aprovado/recusado na hora
   if (pag.status !== 'pendente') await atualizarStatus(pedidoId, pag.status);
   return buscarPedido(pedidoId);
 }
@@ -75,7 +69,6 @@ export async function iniciarCheckout(pedidoId, { metodo, cartao } = {}) {
 export async function consultarPedido(pedidoId) {
   const pedido = await buscarPedido(pedidoId);
 
-  // O status vem do provedor, nunca da tela de retorno
   if (pedido.pagamento && pedido.status === 'pendente') {
     const status = await provider.consultar(pedido.pagamento.id_externo);
     if (status !== pedido.status) {

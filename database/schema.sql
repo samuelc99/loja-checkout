@@ -29,7 +29,6 @@ CREATE TABLE itens_pedido (
   FOREIGN KEY (produto_id) REFERENCES produtos(id)
 );
 
--- pedido_id UNIQUE: um pedido nunca gera dois pagamentos (RF07)
 CREATE TABLE pagamentos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   pedido_id CHAR(36) NOT NULL UNIQUE,
@@ -44,7 +43,6 @@ CREATE TABLE pagamentos (
   FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
 );
 
--- Cada mudança de status do pedido vira uma linha (pendente -> aprovado, etc.)
 CREATE TABLE historico_status (
   id INT AUTO_INCREMENT PRIMARY KEY,
   pedido_id CHAR(36) NOT NULL,
