@@ -23,12 +23,16 @@ cp .env.example .env      # depois edite o .env com a senha do MySQL
 npm start                 # http://localhost:3001
 ```
 
+> **No Windows (PowerShell):** copie o `.env.example` para `.env` manualmente e crie o banco com
+> `cmd /c "mysql -u root -p < database\schema.sql"` (se o `mysql` não estiver no PATH, use o caminho completo,
+> ex.: `"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"`).
+
 ### Provedor de pagamento
 
 | `PAYMENT_PROVIDER` | Comportamento |
 |---|---|
 | `simulado` (padrão) | Gera um Pix fictício que é aprovado automaticamente 15 s depois. Não precisa de conta. |
-| `mercadopago` | Cria um Pix real no ambiente de testes. Preencha `MP_ACCESS_TOKEN` com o **Access Token de teste** do painel Mercado Pago Developers. |
+| `mercadopago` | Cria o Pix pelo Mercado Pago. Preencha `MP_ACCESS_TOKEN` com um Access Token do painel Mercado Pago Developers: com o **de teste**, o QR Code é fictício; com o **de produção**, o pagamento é real (a conta precisa ter uma chave Pix cadastrada). |
 
 ## Estrutura
 
@@ -69,10 +73,10 @@ sequenceDiagram
     A->>P: cria cobrança Pix (X-Idempotency-Key = id do pedido)
     P-->>A: id externo + QR Code
     A->>DB: grava pagamento
-    F->>A: GET /api/pedidos/:id ("Verificar pagamento")
+    F->>A: GET /api/pedidos/:id (a cada 5 s enquanto pendente)
     A->>P: consulta status
-    A->>DB: atualiza status
-    A-->>F: pedido + status
+    A->>DB: atualiza status + histórico
+    A-->>F: pedido + status + histórico
 ```
 
 ## Modelo do banco
@@ -140,7 +144,7 @@ Valores em **centavos (INT)** — sem ponto flutuante para dinheiro.
 | GET | `/api/produtos` | Lista produtos ativos |
 | POST | `/api/pedidos` | Cria pedido. Body: `{ "nome", "email", "itens": [{ "produtoId", "quantidade" }] }`. Retorna `{ id, total_centavos, status }` |
 | POST | `/api/pedidos/:id/checkout` | Cria a cobrança Pix no provedor e retorna o pedido com `pagamento` (QR Code, copia e cola, link) |
-| GET | `/api/pedidos/:id` | Retorna o pedido; se estiver pendente, consulta o provedor e atualiza o status |
+| GET | `/api/pedidos/:id` | Retorna o pedido, o pagamento e o `historico` de status; se estiver pendente, consulta o provedor e atualiza o status |
 
 Status possíveis: `pendente`, `aprovado`, `recusado`, `expirado`, `cancelado`.
 Erros retornam `{ "erro": "mensagem" }` com status 400, 404, 502 ou 503.
@@ -159,7 +163,7 @@ Erros retornam `{ "erro": "mensagem" }` com status 400, 404, 502 ou 503.
 - Apenas **Pix**.
 - **Sem webhook**: a tela do pedido consulta o status a cada 5 segundos enquanto ele está pendente (ou ao clicar em "Verificar pagamento"); a API então pergunta ao provedor.
 - O carrinho fica em memória no navegador (recarregar a página o esvazia).
-- O provedor guarda os pagamentos em memória; ao reiniciar o servidor, pagamentos pendentes antigos aparecem como `expirado`.
+- O provedor **simulado** guarda os pagamentos em memória; ao reiniciar o servidor, pagamentos pendentes antigos aparecem como `expirado`.
 - No ambiente de teste do Mercado Pago o Pix não é pago de verdade; o pedido fica `pendente` até expirar.
 
 ## Testes realizados
