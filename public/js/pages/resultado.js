@@ -2,6 +2,8 @@ import { api } from '../api.js';
 import { formatarPreco, esc } from '../utils.js';
 import StatusBadge from '../components/statusBadge.js';
 
+let timer;
+
 export default async function Resultado(app, pedidoId) {
   async function render() {
     let pedido;
@@ -27,11 +29,17 @@ export default async function Resultado(app, pedidoId) {
         ${pendente ? '<button id="atualizar">Verificar pagamento</button>' : '<a class="botao" href="#/">Voltar para a loja</a>'}
       </section>
       <aside class="card">
-        <h2>Como funciona</h2>
-        <p>O status é consultado no provedor de pagamento pelo nosso servidor — não confiamos apenas nesta tela.</p>
+        <h2>Histórico de status</h2>
+        ${(pedido.historico || []).map((h) => `
+          <div class="linha">${StatusBadge(h.status)}<small>${new Date(h.criado_em).toLocaleString('pt-BR')}</small></div>`).join('')}
+        <p><small>O status é consultado no provedor pelo nosso servidor — não confiamos apenas nesta tela.</small></p>
       </aside>`;
 
     app.querySelector('#atualizar')?.addEventListener('click', render);
+
+    // Enquanto pendente e nesta tela, consulta de novo a cada 5 segundos
+    clearTimeout(timer);
+    if (pendente) timer = setTimeout(() => location.hash === `#/pedido/${pedidoId}` && render(), 5000);
   }
 
   await render();
