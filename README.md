@@ -3,7 +3,7 @@
 Checkout web de uma loja fictícia: o cliente escolhe produtos, informa seus dados e paga com **Pix**.
 Integração com **Mercado Pago (Checkout Transparente / Orders API)** e um modo **simulado** para demonstração sem conta.
 
-**Stack:** Node.js + Express, MySQL, HTML/CSS/JavaScript puro (sem framework).
+**Stack:** Node.js + Express, MySQL, HTML/CSS/JavaScript.
 
 ## Como executar
 
