@@ -43,6 +43,15 @@ CREATE TABLE pagamentos (
   FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
 );
 
+-- Cada mudança de status do pedido vira uma linha (pendente -> aprovado, etc.)
+CREATE TABLE historico_status (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pedido_id CHAR(36) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
+);
+
 INSERT INTO produtos (nome, descricao, preco_centavos) VALUES
   ('Fone de Ouvido Bluetooth', 'Cancelamento de ruído, 30h de bateria', 29990),
   ('Mouse Sem Fio', 'Sensor óptico 1600 DPI', 8990),

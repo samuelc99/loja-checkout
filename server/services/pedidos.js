@@ -29,6 +29,7 @@ export async function criarPedido({ nome, email, itens } = {}) {
     'INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario_centavos) VALUES ?',
     [linhas.map((l) => [id, ...l])]
   );
+  await registrarHistorico(id, 'pendente');
 
   return { id, total_centavos: total, status: 'pendente' };
 }
@@ -56,6 +57,7 @@ export async function consultarPedido(pedidoId) {
     if (status !== pedido.status) {
       await db.query('UPDATE pagamentos SET status = ? WHERE pedido_id = ?', [status, pedidoId]);
       await db.query('UPDATE pedidos SET status = ? WHERE id = ?', [status, pedidoId]);
+      await registrarHistorico(pedidoId, status);
       return buscarPedido(pedidoId);
     }
   }
@@ -69,5 +71,13 @@ async function buscarPedido(id) {
     'SELECT provedor, id_externo, status, qr_code, qr_code_base64, checkout_url FROM pagamentos WHERE pedido_id = ?',
     [id]
   );
-  return { ...pedido, pagamento: pagamento || null };
+  const [historico] = await db.query(
+    'SELECT status, criado_em FROM historico_status WHERE pedido_id = ? ORDER BY id',
+    [id]
+  );
+  return { ...pedido, pagamento: pagamento || null, historico };
+}
+
+function registrarHistorico(pedidoId, status) {
+  return db.query('INSERT INTO historico_status (pedido_id, status) VALUES (?, ?)', [pedidoId, status]);
 }
