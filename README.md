@@ -107,7 +107,7 @@ erDiagram
     }
     pagamentos {
         INT id PK
-        CHAR pedido_id FK,UK
+        CHAR pedido_id FK
         VARCHAR provedor
         VARCHAR id_externo
         VARCHAR metodo
