@@ -156,22 +156,13 @@ Erros retornam `{ "erro": "mensagem" }` com status 400, 404, 502 ou 503.
 
 - **Total calculado no backend**: o navegador envia só IDs e quantidades; os preços vêm do banco.
 - **Status vem do provedor**: a tela de resultado consulta a API, que pergunta ao provedor. Nada é marcado como pago pelo navegador.
-- **Sem duplicar pagamento (RF07)**: `pagamentos.pedido_id` é `UNIQUE`, o checkout devolve o pagamento existente se for chamado de novo, e o Mercado Pago recebe `X-Idempotency-Key` com o ID do pedido.
+- **Sem duplicar pagamento**: `pagamentos.pedido_id` é `UNIQUE`, o checkout devolve o pagamento existente se for chamado de novo, e o Mercado Pago recebe `X-Idempotency-Key` com o ID do pedido.
 - **Camada de integração separada**: cada provedor é um módulo com `criarPix()`, `criarCartao()` e `consultar()`; trocar de provedor é só mudar o `.env`.
 - **Cartão sem passar pelo servidor**: o formulário de cartão é o Card Payment Brick do Mercado Pago; número, validade e CVV vão direto ao provedor, e o backend recebe apenas um token de uso único.
 - **CPF**: validado no backend (dígitos verificadores), enviado ao provedor como identificação do pagador e não é devolvido pela API de consulta do pedido.
 - **Segurança**: Access Token só no backend e no `.env` (ignorado pelo Git); nenhum dado de cartão é armazenado; entradas validadas; logs sem token nem dados pessoais; HTML escapado no frontend.
 - **Falhas do provedor**: timeout de 10 s, erro 429 (limite de requisições) e respostas inválidas viram mensagens claras para o usuário (502/503).
 
-## Limitações
-
-- **Pix** e **cartão à vista** (sem parcelamento); boleto ficou de fora.
-- O cartão tem valor mínimo exigido pelo Mercado Pago: em pedidos muito baratos (ex.: R$ 0,10) o formulário de cartão não carrega e a tela sugere pagar com Pix.
-- No modo simulado, o cartão é sempre aprovado (não há formulário de cartão, já que não existe provedor real).
-- **Sem webhook**: a tela do pedido consulta o status a cada 5 segundos enquanto ele está pendente (ou ao clicar em "Verificar pagamento"); a API então pergunta ao provedor.
-- O carrinho fica em memória no navegador (recarregar a página o esvazia).
-- O provedor **simulado** guarda os pagamentos em memória; ao reiniciar o servidor, pagamentos pendentes antigos aparecem como `expirado`.
-- No ambiente de teste do Mercado Pago o Pix não é pago de verdade; o pedido fica `pendente` até expirar.
 
 ## Testes realizados
 
