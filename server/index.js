@@ -2,6 +2,7 @@ import express from 'express';
 import produtosRoutes from './routes/produtos.js';
 import pedidosRoutes from './routes/pedidos.js';
 import provider from './providers/index.js';
+import { iniciarNgrok } from './ngrok.js';
 
 const app = express();
 app.use(express.json());
@@ -20,4 +21,7 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Loja rodando em http://localhost:${port}`));
+app.listen(port, () => {
+  console.log(`Loja rodando em http://localhost:${port}`);
+  if (process.env.NGROK === 'true') iniciarNgrok(port);
+});
