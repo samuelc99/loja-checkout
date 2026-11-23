@@ -174,10 +174,9 @@ Erros retornam `{ "erro": "mensagem" }` com status 400, 404, 502 ou 503.
 | 4 | Tela do pedido **atualiza sozinha** (consulta a cada 5 s) e mostra `aprovado` sem clicar | ✅ OK |
 | 5 | Formulário não avança com **campos vazios** ou **e-mail inválido** | ✅ OK |
 | 6 | Botão "Ir para o pagamento" fica **desabilitado com carrinho vazio** | ✅ OK |
-| 7 | API recusa pedido com nome vazio (`400 {"erro":"Nome é obrigatório"}`) | ✅ OK |
-| 8 | Com o MySQL desligado, a API responde `500 {"erro":"Erro interno"}` sem expor detalhes | ✅ OK |
-| 9 | Credenciais de **teste** do Mercado Pago: QR Code gerado, mas recusado pelos bancos (esperado, é um ambiente fictício) | ✅ Comportamento esperado |
-| 10 | API recusa **CPF inválido** (`400 {"erro":"CPF inválido"}`) e aceita CPF válido | ✅ OK |
-| 11 | API recusa método de pagamento desconhecido (`400 {"erro":"Método de pagamento inválido"}`) | ✅ OK |
-| 12 | Opção **Cartão** com Mercado Pago: formulário seguro do Mercado Pago carrega na página | ✅ OK |
-| 13 | Cartão em pedido de **R$ 0,10**: Mercado Pago não aceita o valor (abaixo do mínimo) | ✅ Comportamento esperado |
+| 7 | Com o MySQL desligado, a API responde `500 {"erro":"Erro interno"}` sem expor detalhes | ✅ OK |
+| 8 | Credenciais de **teste** do Mercado Pago: QR Code gerado, mas recusado pelos bancos (esperado, é um ambiente fictício) | ✅ Comportamento esperado |
+| 9 | API recusa **CPF inválido** (`400 {"erro":"CPF inválido"}`) e aceita CPF válido | ✅ OK |
+| 10 | API recusa método de pagamento desconhecido (`400 {"erro":"Método de pagamento inválido"}`) | ✅ OK |
+| 11 | Opção **Cartão** com Mercado Pago: formulário seguro do Mercado Pago carrega na página | ✅ OK |
+| 12| Cartão em pedido de **R$ 0,10**: Mercado Pago não aceita o valor (abaixo do mínimo) | ✅ Comportamento esperado |
